@@ -94,7 +94,9 @@ class MainWindow (QMainWindow):
         self.reffiles=[]
         self.selectedBgFrameNums=[]
         self.selectedreffiles_rows=[]
+        self.mcafitplotstatus = 0
         self.mcafiles=[]
+        self.selectedMcaScanNums=[]
         self.selectedmcafiles_rows=[]
         self.selectedplotfiles_rows=[]
         self.ui.PlotWidget.setCurrentIndex(0)
@@ -108,6 +110,7 @@ class MainWindow (QMainWindow):
         self.formfactor_rz=0
         self.mcafitstatus=0
         self.mcafitallstatus=0
+        self.fitplotstatus = 0
         self.cutDirItems=['H Cut', 'V Cut', 'Qz Cut', 'Qxy Cut']
         self.ui.pilCutDirComboBox.clear()
         self.ui.pilCutDirComboBox.addItems(self.cutDirItems)
@@ -171,17 +174,17 @@ class MainWindow (QMainWindow):
      #    self.connect(self.ui.imageListWidget, SIGNAL('itemSelectionChanged()'),self.imageSelectedScanChanged)
         self.ui.imageListWidget.itemSelectionChanged.connect(self.imageSelectedScanChanged)
      #    self.connect(self.ui.mcaLogXCheckBox, SIGNAL('stateChanged(int)'),self.updateMcaPlotData)
-        self.ui.mcaLogXCheckBox.stateChanged.connect(self.updateMcaPlotData)
+        self.ui.mcaLogXCheckBox.stateChanged.connect(self.mcaPlotSettings)
      #    self.connect(self.ui.mcaLogYCheckBox, SIGNAL('stateChanged(int)'),self.updateMcaPlotData)
-        self.ui.mcaLogYCheckBox.stateChanged.connect(self.updateMcaPlotData)
+        self.ui.mcaLogYCheckBox.stateChanged.connect(self.mcaPlotSettings)
      #    self.connect(self.ui.mcaGridCheckBox, SIGNAL('stateChanged(int)'),self.updateMcaPlotData)
-        self.ui.mcaGridCheckBox.stateChanged.connect(self.updateMcaPlotData)
+        self.ui.mcaGridCheckBox.stateChanged.connect(self.mcaPlotSettings)
      #    self.connect(self.ui.mcaLegendCheckBox, SIGNAL('stateChanged(int)'),self.updateMcaPlotData)
-        self.ui.mcaLegendCheckBox.stateChanged.connect(self.updateMcaPlotData)
+        self.ui.mcaLegendCheckBox.stateChanged.connect(self.mcaPlotSettings)
      #    self.connect(self.ui.mcaNormComboBox, SIGNAL('currentIndexChanged(int)'),self.updateMcaPlotData)
         self.ui.mcaNormComboBox.currentIndexChanged.connect(self.updateMcaPlotData)
      #    self.connect(self.ui.mcaLegendLocComboBox, SIGNAL('currentIndexChanged(int)'),self.updateMcaPlotData)
-        self.ui.mcaLegendLocComboBox.currentIndexChanged.connect(self.updateMcaPlotData)
+        self.ui.mcaLegendLocComboBox.currentIndexChanged.connect(self.mcaPlotSettings)
      #    self.connect(self.ui.mcaCalibCheckBox, SIGNAL('stateChanged(int)'),self.updateMcaPlotData)
         self.ui.mcaCalibCheckBox.stateChanged.connect(self.updateMcaPlotData)
      #    self.connect(self.ui.mcaCalibConLineEdit, SIGNAL('returnPressed()'),self.updateMcaPlotData)
@@ -190,6 +193,7 @@ class MainWindow (QMainWindow):
         self.ui.mcaCalibLinLineEdit.returnPressed.connect(self.updateMcaPlotData)
      #    self.connect(self.ui.mcaCalibQuaLineEdit, SIGNAL('returnPressed()'),self.updateMcaPlotData)
         self.ui.mcaCalibQuaLineEdit.returnPressed.connect(self.updateMcaPlotData)
+        self.ui.mcaRanLineEdit.returnPressed.connect(self.updateMCAPlotVline)
      #    self.connect(self.ui.gixSumCheckBox,SIGNAL('stateChanged(int)'),self.update2dPlots)
         self.ui.gixSumCheckBox.stateChanged.connect(self.update2dPlots)
      #    self.connect(self.ui.gixBPCfacLineEdit,SIGNAL('returnPressed()'),self.imageSelectedScanChanged)
@@ -962,41 +966,66 @@ class MainWindow (QMainWindow):
             self.ui.PlotWidget.setCurrentIndex(5)
             self.updateMcaPlotData()
         except:
-            self.ui.statusBar.showMessage('Warning:: Some scans maybe missing')
+            self.ui.statusBar.showMessage('Warning:: Some scans maybe missing!')
             
             
             
     def updateMcaPlotData(self):
-        self.ui.statusBar.clearMessage()
-        self.ui.mcaPlotMplWidget.canvas.ax.clear()
-        self.nomMcaData={}
-        fact=1.0
-        for i in self.selectedMcaScanNums:
-            y=pl.array(self.mcaData[i]['Vortex'],dtype='float')
-            x=pl.arange(1,len(y)+1)
-            if self.ui.mcaCalibCheckBox.checkState()!=0:
-                self.ui.mcaCalibConLineEdit.setText(str(self.mcaPar[i]['Calib'][0]))
-                self.ui.mcaCalibLinLineEdit.setText(str(self.mcaPar[i]['Calib'][1]))
-                self.ui.mcaCalibQuaLineEdit.setText(str(self.mcaPar[i]['Calib'][2]))
-            con=float(self.ui.mcaCalibConLineEdit.text())
-            lin=float(self.ui.mcaCalibLinLineEdit.text())
-            qua=float(self.ui.mcaCalibQuaLineEdit.text())
-            x=con+lin*x+qua*x**2
-            if str(self.ui.mcaNormComboBox.currentText())!='None':
-                monitor=str(self.ui.mcaNormComboBox.currentText())
-                n=self.mcaData[i][monitor]
-                tc=self.mcaPar[i]['Time'][1]/self.mcaPar[i]['Time'][2]  #real count time correction
-                self.nomMcaData[i]=np.vstack((x,y/n*tc,pl.sqrt(y+y**2/n)/n*tc)).transpose()
-            else:
-                n=1
-                tc=1
-                self.nomMcaData[i]=np.vstack((x,y,pl.sqrt(y))).transpose()
-            self.mcaLabel=str(i+1)+' Qz='+'%.4f'%self.mcaPar[i]['Q'][2]
-            if self.ui.mcaOffsetCheckBox.checkState()!=0:
-                fact=fact*float(self.ui.mcaOffsetLineEdit.text())
-            self.mcaPlot(x,y,n,tc,fact)
-        self.mcaPlotSettings()
-        self.ui.statusBar.showMessage('Done')
+        if len(self.selectedMcaScanNums)==0:
+            pass
+
+        else:
+
+            self.ui.statusBar.clearMessage()
+            self.ui.mcaPlotMplWidget.canvas.ax.clear()
+            self.nomMcaData={}
+            fact=1.0
+
+            if len(self.selectedMcaScanNums) > 10:
+                self.progressDialog = QProgressDialog('Reading MCA Frames', 'Abort', 0, 100)
+                self.progressDialog.setWindowModality(Qt.WindowModal)
+                self.progressDialog.setWindowTitle('Wait')
+                self.progressDialog.setAutoClose(True)
+                self.progressDialog.setAutoReset(True)
+                self.progressDialog.setMinimum(1)
+                self.progressDialog.setMaximum(len(self.selectedMcaScanNums))
+                self.progressDialog.show()
+
+            self.mcaMax=0
+
+            for i in self.selectedMcaScanNums:
+                y=pl.array(self.mcaData[i]['Vortex'],dtype='float')
+                x=pl.arange(1,len(y)+1)
+                if self.ui.mcaCalibCheckBox.checkState()!=0:
+                    self.ui.mcaCalibConLineEdit.setText(str(self.mcaPar[i]['Calib'][0]))
+                    self.ui.mcaCalibLinLineEdit.setText(str(self.mcaPar[i]['Calib'][1]))
+                    self.ui.mcaCalibQuaLineEdit.setText(str(self.mcaPar[i]['Calib'][2]))
+                con=float(self.ui.mcaCalibConLineEdit.text())
+                lin=float(self.ui.mcaCalibLinLineEdit.text())
+                qua=float(self.ui.mcaCalibQuaLineEdit.text())
+                x=con+lin*x+qua*x**2
+                if str(self.ui.mcaNormComboBox.currentText())!='None':
+                    monitor=str(self.ui.mcaNormComboBox.currentText())
+                    n=self.mcaData[i][monitor]
+                    tc=self.mcaPar[i]['Time'][1]/self.mcaPar[i]['Time'][2]  #real count time correction
+                    self.nomMcaData[i]=np.vstack((x,y/n*tc,pl.sqrt(y+y**2/n)/n*tc)).transpose()
+                else:
+                    n=1
+                    tc=1
+                    self.nomMcaData[i]=np.vstack((x,y,pl.sqrt(y))).transpose()
+                self.mcaLabel=str(i+1)+' Qz='+'%.4f'%self.mcaPar[i]['Q'][2]
+                if self.ui.mcaOffsetCheckBox.checkState()!=0:
+                    fact=fact*float(self.ui.mcaOffsetLineEdit.text())
+                self.mcaPlot(x,y,n,tc,fact)
+                if len(self.selectedMcaScanNums) > 10:
+                    self.progressDialog.setLabelText('Reading MCA Frame #' + str(i))
+                    self.updateProgress()
+                    if self.progressDialog.wasCanceled() == True:
+                        break
+            if len(self.selectedMcaScanNums) > 10:
+                self.progressDialog.hide()
+            self.mcaPlotSettings()
+            self.ui.statusBar.showMessage('Done')
         
     def mcaPlot(self,x,y,n,tc,fact):
         if str(self.ui.mcaNormComboBox.currentText())!='None':
@@ -1004,9 +1033,21 @@ class MainWindow (QMainWindow):
         else:
             yerr=pl.sqrt(y)
         y=y/n*tc
+        self.mcaMax=max(self.mcaMax,max(y+yerr))
         self.ui.mcaPlotMplWidget.canvas.ax.errorbar(x,fact*y,fact*yerr,label=self.mcaLabel,fmt='o-')
 
         
+    def updateMCAPlotVline(self):
+        try:
+            # left = float(str(self.ui.mcaRanLineEdit.text()).split(':')[0])
+            # right = float(str(self.ui.mcaRanLineEdit.text()).split(':')[1])
+            # self.leftLine.set_xdata([left, left])
+            # self.rightLine.set_xdata([right, right])
+            self.mcavlines.remove()
+        except:
+            pass
+        self.mcaPlotSettings()
+
     def mcaPlotSettings(self):
         self.mcaLogX=self.ui.mcaLogXCheckBox.checkState()
         self.mcaLogY=self.ui.mcaLogYCheckBox.checkState()
@@ -1016,7 +1057,16 @@ class MainWindow (QMainWindow):
         self.ui.mcaPlotMplWidget.canvas.ax.set_xlabel('Energy')
         self.ui.mcaPlotMplWidget.canvas.ax.set_ylabel('Intensity')
         self.ui.mcaPlotMplWidget.canvas.ax.set_title('Fluorescence Spectrum')
-        #self.ui.specPlotMplWidget.canvas.ax.legend('_nolegend_')
+
+        try:
+            left = float(str(self.ui.mcaRanLineEdit.text()).split(':')[0])
+            right = float(str(self.ui.mcaRanLineEdit.text()).split(':')[1])
+            self.mcavlines=self.ui.mcaPlotMplWidget.canvas.ax.vlines(x=[left,right], ymin=0, ymax=self.mcaMax, color='k')
+        except:
+            pass
+
+
+
         self.ui.mcaPlotMplWidget.canvas.ax.grid(b=False)
         if self.mcaLogX!=0:
             self.ui.mcaPlotMplWidget.canvas.ax.set_xscale('log')
@@ -1026,6 +1076,8 @@ class MainWindow (QMainWindow):
             self.ui.mcaPlotMplWidget.canvas.ax.grid(b=True,color='r',linestyle='--')
         if self.ui.mcaLegendCheckBox.checkState()!=0:
             self.ui.mcaPlotMplWidget.canvas.ax.legend(loc=self.ui.mcaLegendLocComboBox.currentIndex()+1,frameon=False,scatterpoints=0,numpoints=1)
+        else:
+            self.ui.mcaPlotMplWidget.canvas.ax.legend().set_visible(False)
         if self.mcafitplotstatus==1:
              fit=np.array(self.peakfitdata)
              xran=np.abs(fit[:,0][-1]-fit[:,0][0])
@@ -1033,6 +1085,7 @@ class MainWindow (QMainWindow):
              self.ui.mcaPlotMplWidget.canvas.ax.plot(fit[:,0],fit[:,1],'r-')
              self.ui.mcaPlotMplWidget.canvas.ax.set_xlim(fit[:,0][0]-0.25*xran,fit[:,0][-1]+0.25*xran)
              self.ui.mcaPlotMplWidget.canvas.ax.set_ylim(np.min(fit[:,1])-0.2*yran,np.max(fit[:,1])+0.2*yran)
+        self.ui.mcaPlotMplWidget.canvas.ax.autoscale(tight=True)
         self.ui.mcaPlotMplWidget.canvas.draw()
             
     def saveMcaData(self):
@@ -1088,9 +1141,9 @@ class MainWindow (QMainWindow):
                 else:
                     string='%.4f'%energy+'\t'+'%.4e'%inten+'\t'+'%.4e'%error
                 self.ui.mcaDataListWidget.addItem(string)
-                self.updateMcaIntPlot()
-                self.command='Flu Sum, scans=['+str([item for item in np.sort(self.selectedScanNums)])[1:-1]+'], energy range=['+str(ini)+':'+str(fin)+']'
-                self.ui.commandLineEdit.setText(self.command)
+            self.updateMcaIntPlot()
+            self.command='Flu Sum, scans=['+str([item for item in np.sort(self.selectedScanNums)])[1:-1]+'], energy range=['+str(ini)+':'+str(fin)+']'
+            self.ui.commandLineEdit.setText(self.command)
         except:
             self.messageBox('Please input the proper sum range in the format of "min:max"!')
             self.ui.mcaRanLineEdit.setText('1:1000')
@@ -4718,9 +4771,12 @@ class MainWindow (QMainWindow):
         self.ui.PlotMplWidget.canvas.draw()
         
     def saveGraPlotData(self): #save the derivative data
-        self.saveFileName=str(QFileDialog.getSaveFileName(caption='Save Derivative Data',directory=self.directory)[0])
-        fitfile=self.saveFileName+'_der.txt'
-        np.savetxt(fitfile,self.gradata,fmt='%.4e\t%.4e')
+        try:
+            self.saveFileName=str(QFileDialog.getSaveFileName(caption='Save Derivative Data',directory=self.directory)[0])
+            fitfile=self.saveFileName+'_der.txt'
+            np.savetxt(fitfile,self.gradata,fmt='%.4e\t%.4e')
+        except:
+            pass
     
     def setPlotScale(self): #set the scale of each data in the plot
         if len(self.selectedplotfiles_rows)==0:
