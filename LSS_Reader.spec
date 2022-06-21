@@ -5,7 +5,7 @@ block_cipher = None
 
 
 a = Analysis(['LSS_Reader.py'],
-             pathex=['C:\\Users\\bu\\PY38\\Liquid_Surface_ChemMatCARS\\LSS_Reader'],
+             pathex=['C:\\Users\\bu\\PycharmProjects\ChemMatCARS\\LSS_Reader'],
              binaries=[],
              datas=[('*.ui','.'),
                     ('mpl2dwidget.py','.'),

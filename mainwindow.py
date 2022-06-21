@@ -4997,13 +4997,14 @@ class MainWindow (QMainWindow):
                 data=self.nomMcaData[self.selectedMcaScanNums[i]]
                 self.mcafitstatus==1
                 self.mcaLabelOne=str(i+1)
-                self.fitPeak(data)
-                self.mcaAcceptPeak(num=i)
+                success=self.fitPeak(data,num=i)
+                if success:
+                    self.mcaAcceptPeak(num=i)
             self.mcafitallstatus=0
             self.uipeakfit.close()
         
     
-    def fitPeak(self,data): #fit the peak 
+    def fitPeak(self,data, num=0): #fit the peak
         data=data[np.argsort(data[:,0])]
         try:
             ini=max(float(str(self.uipeakfit.rangeLineEdit.text()).split(':')[0]),data[0][0])
@@ -5043,8 +5044,12 @@ class MainWindow (QMainWindow):
                 flag=[1,peaknumber]
             p0=[float(value) for sublist in p for value in sublist]
             pfit,pcov,info,errmsg,ier=leastsq(self.peakres,p0,args=(x,y,yerr,flag), full_output=1)
-     #       print pcov
-    #        print info,errmsg,ier
+
+            if (ier>4):
+                self.messageBox("Could NOT fit Frame #"+str(num)+"!")
+                return False
+            #print(pcov)
+            #print(info,errmsg,ier)
             residual=self.peakres(pfit,x,y,yerr,flag)
             self.chisquare=np.sum(residual**2)/(len(x)-len(p0))
             self.fiterror=[np.sqrt(self.chisquare*pcov[i,i]) for i in range(len(p0))]
@@ -5053,6 +5058,7 @@ class MainWindow (QMainWindow):
             else:
                 self.peakfitdatay=sum(self.lorfun(x0,pfit[3*i:3*i+3]) for i in range(flag[1]))+self.polyfun(x0,pfit[3*flag[1]:])
             self.peakfitdata=[[x0[i],self.peakfitdatay[i]] for i in range(len(x0))]
+            return True
         else: # regluar fitting 
             self.fitpeakpara=[value for sublist in self.fitpeakpara for value in sublist]
             for i in range(3*peaknumber):
