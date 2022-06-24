@@ -5058,7 +5058,7 @@ class MainWindow (QMainWindow):
             else:
                 self.peakfitdatay=sum(self.lorfun(x0,pfit[3*i:3*i+3]) for i in range(flag[1]))+self.polyfun(x0,pfit[3*flag[1]:])
             self.peakfitdata=[[x0[i],self.peakfitdatay[i]] for i in range(len(x0))]
-            return True
+            #return True
         else: # regluar fitting 
             self.fitpeakpara=[value for sublist in self.fitpeakpara for value in sublist]
             for i in range(3*peaknumber):
@@ -5135,6 +5135,7 @@ class MainWindow (QMainWindow):
             for i in range(bgorder+1): 
                     self.uipeakfit.bgTW.setItem(i,0,QTableWidgetItem(str(float('%.4g' % self.fitbgpara[i]))))
             self.uipeakfit.chiLineEdit.setText(str(float('%.3f' % self.chisquare)))
+            return True
         else:    # for regular fitting
             for i in range(peaknumber): # set values
                 for j in range(3):
