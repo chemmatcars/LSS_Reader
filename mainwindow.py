@@ -1082,7 +1082,7 @@ class MainWindow (QMainWindow):
              fit=np.array(self.peakfitdata)
              xran=np.abs(fit[:,0][-1]-fit[:,0][0])
              yran=np.max(fit[:,1])-np.min(fit[:,1])
-             self.ui.mcaPlotMplWidget.canvas.ax.plot(fit[:,0],fit[:,1],'r-')
+             self.ui.mcaPlotMplWidget.canvas.ax.plot(fit[:,0],fit[:,1],'r-',zorder=1)
              self.ui.mcaPlotMplWidget.canvas.ax.set_xlim(fit[:,0][0]-0.25*xran,fit[:,0][-1]+0.25*xran)
              self.ui.mcaPlotMplWidget.canvas.ax.set_ylim(np.min(fit[:,1])-0.2*yran,np.max(fit[:,1])+0.2*yran)
         self.ui.mcaPlotMplWidget.canvas.ax.autoscale(tight=True)
@@ -2569,7 +2569,6 @@ class MainWindow (QMainWindow):
                 averagemonc[ckey]=[self.pilMonc[i]]
         #print averagemonc, ckey
         #print np.average(averagemonc[ckey])
-        
         for i in self.selectedPilFramesNums:
             self.pilatus.plotHint({i:self.pilData[i]},{i:self.pilErrorData[i]},absnum=[self.pil_AbsNum[i]],cen=[self.xcenter[j],self.ycenter[j]], hroi=[self.pilxleft[j], self.pilxright[j]], vroi=[5,486], ax_type='Angles', wavelength=[self.pil_Wavelength[i]],s2d_dist=[self.pil_Dist[i]], sh=[self.pil_Sh[i]],alpha=self.pilAlpha[i], truealpha=self.pilTrueAlpha[i], mon=[self.pilMonc[i]])
             j=j+1
@@ -4828,6 +4827,11 @@ class MainWindow (QMainWindow):
                 self.uipeakfit.rangeLineEdit.setText(str(self.peakfitranini)+':'+str(self.peakfitranfin))
             except:
                 pass
+            try:
+                self.uipeakfit.numberOfPeakSpinBox.setValue(len(self.fitpeakpara))
+                self.uipeakfit.bgSpinBox.setValue(len(self.fitbgpara)-1)
+            except:
+                pass
             peakrow=self.uipeakfit.numberOfPeakSpinBox.value()
             bgrow=self.uipeakfit.bgSpinBox.value()+1
             self.uipeakfit.peakTW.setRowCount(peakrow) #set the row for peak parameter; 3 colomn is fixed
@@ -4841,8 +4845,14 @@ class MainWindow (QMainWindow):
             for i in range(bgrow):
                 bgvlabel.append("C"+str(i))
             self.uipeakfit.bgTW.setVerticalHeaderLabels(bgvlabel)
-            self.fitpeakpara=[[1,1,1] for i in range(peakrow)]
-            self.fitbgpara=[0 for i in range(bgrow)]
+
+            try:
+                self.fitpeakpara = self.fitpeakpara
+                self.fitbgpara = self.fitbgpara
+            except:
+                self.fitpeakpara = [[1, 1, 1] for i in range(peakrow)]
+                self.fitbgpara = [0 for i in range(bgrow)]
+
             self.peakparadic={}
             self.peakbgparadic={}            
             for i in range(peakrow): # set values
@@ -5026,7 +5036,11 @@ class MainWindow (QMainWindow):
         x=data1[:,0]
         y=data1[:,1]
         yerr=data1[:,2]
-        yerr[yerr==0]=np.min(yerr[np.nonzero(yerr)]) #replace zero with minumun nonzero value
+        try:
+            yerr[yerr==0]=np.min(yerr[np.nonzero(yerr)]) #replace zero with minumun nonzero value
+        except:
+            yerr[yerr == 0]=1
+            self.messageBox('All error bar values are zero, replacing them by 1')
         x0=np.linspace(x[0],x[-1],len(x)*10)
         self.fitpeakpara=[[float(str(self.uipeakfit.peakTW.item(i,j).text())) for j in range(3)] for i in range(peaknumber)]
         if peaknumber==1:
@@ -5045,7 +5059,7 @@ class MainWindow (QMainWindow):
             p0=[float(value) for sublist in p for value in sublist]
             pfit,pcov,info,errmsg,ier=leastsq(self.peakres,p0,args=(x,y,yerr,flag), full_output=1)
 
-            if (ier>4):
+            if (ier>4 or pcov is None):
                 self.messageBox("Could NOT fit Frame #"+str(num)+"!")
                 return False
             #print(pcov)
