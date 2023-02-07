@@ -979,7 +979,7 @@
               <number>2</number>
              </property>
              <property name="value">
-              <number>1</number>
+              <number>0</number>
              </property>
             </widget>
            </item>
@@ -1308,7 +1308,7 @@
               <string>Low Qz Corr.</string>
              </property>
              <property name="checked">
-              <bool>true</bool>
+              <bool>false</bool>
              </property>
             </widget>
            </item>
