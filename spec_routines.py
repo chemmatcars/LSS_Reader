@@ -95,8 +95,11 @@ class specread:
                         self.Par[num]['g_l2']=float(line[4:].split()[6])
                         self.Par[num]['g_l3']=float(line[4:].split()[7])
                     if line[:2]=='#A':
-                        tmppar=line[2:].split()
-                        self.Par[num]['Absorber']=eval(tmppar[1])
+                        try:
+                            tmppar=line[2:].split()
+                            self.Par[num]['Absorber']=eval(tmppar[1])
+                        except:
+                            self.Par[num]['Absorber'] = 63
                     if line[:2]=='#Q':
                         tmppar=line[2:].split()
                         self.Par[num]['Q']=list(map(eval, tmppar))

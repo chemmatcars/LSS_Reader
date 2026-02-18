@@ -503,7 +503,7 @@ class MainWindow (QMainWindow):
         files=['mainwindow.py','mainwindow.ui','LSS_Reader.py','mca_routines.py','mpl2dwidget.py','mplwidget.py','spec_routines.py','TwoDDetector.py','logo.png']
         fname=[cwd+'/'+fname for fname in files]
         updateTime=max([os.path.getmtime(fn) for fn in fname])
-        self.messageBox('LSS-Reader\n Version: 17.01\nLast Update: '+time.strftime("%m/%d/%Y %I:%M:%S %p",time.localtime(updateTime))+'\nCopyright belongs to:\n\tWei Bu <weibu1977@gmail.com>\n\tMrinal K Bera <nayanbera@gmail.com>',title='About')
+        self.messageBox('LSS-Reader\n Version: 1.1\nLast Update: '+time.strftime("%m/%d/%Y %I:%M:%S %p",time.localtime(updateTime))+'\nCopyright belongs to:\n\tWei Bu <weibu1977@gmail.com>\n\tMrinal K Bera <nayanbera@gmail.com>',title='About')
         
     def openSpecFile(self,fname=None):
         self.ui.statusBar.clearMessage()       
@@ -946,16 +946,19 @@ class MainWindow (QMainWindow):
         self.mcaFileNames=[self.mcafhead+str(i)+self.mcaftail for i in self.selectedScanNums]
         self.mcaData={}
         self.mcaPar={}
-        start=0 
-        for i in range(len(self.mcaFileNames)):  
-            self.mcaread=mcaread(self.mcaFileNames[i],beamline=self.beamline)
-            data=self.mcaread.Data
-            par=self.mcaread.Par
-            for j in range(data['NumOfScans']):                
-                self.mcaData[start]=data[j]
-                self.mcaPar[start]=par[j]
-                self.ui.imageListWidget.addItem('S# '+str(self.selectedScanNums[i])+'\tmS# '+str(j+1)+'\tQz='+str(self.mcaPar[start]['Q'][2]))
-                start=start+1           
+        start=0
+        try:
+            for i in range(len(self.mcaFileNames)):
+                self.mcaread=mcaread(self.mcaFileNames[i],beamline=self.beamline)
+                data=self.mcaread.Data
+                par=self.mcaread.Par
+                for j in range(data['NumOfScans']):
+                    self.mcaData[start]=data[j]
+                    self.mcaPar[start]=par[j]
+                    self.ui.imageListWidget.addItem('S# '+str(self.selectedScanNums[i])+'\tmS# '+str(j+1)+'\tQz='+str(self.mcaPar[start]['Q'][2]))
+                    start=start+1
+        except:
+            self.messageBox('MCA file(s) of selected scans do not exit!')
         # self.connect(self.ui.imageListWidget,SIGNAL('itemSelectionChanged()'),self.imageSelectedScanChanged)
         self.ui.imageListWidget.itemSelectionChanged.connect(self.imageSelectedScanChanged)
         
@@ -1305,7 +1308,7 @@ class MainWindow (QMainWindow):
             self.mcafnames.pop(self.ui.mcaFileListWidget.row(item))
             self.mcafiles.pop(self.ui.mcaFileListWidget.row(item))
         self.ui.mcaFileListWidget.clear()
-        for i in range(len(self.reffnames)):
+        for i in range(len(self.mcafnames)):
             self.ui.mcaFileListWidget.addItem('#'+str(i+1)+'\t'+self.mcafnames[i])    
     
     def updateSelectedMcaFiles(self):
