@@ -111,7 +111,7 @@ class MainWindow (QMainWindow):
         self.mcafitstatus=0
         self.mcafitallstatus=0
         self.fitplotstatus = 0
-        self.cutDirItems=['H Cut', 'V Cut', 'Qz Cut', 'Qxy Cut']
+        self.cutDirItems=['Q H Cut [Qz_min : Qz_max]', 'Q V Cut [Qxy_min : Qxy_max]', 'Pix H Cut [Pix_bottom : Pix_top]', 'Pix V Cut [Pix_left : Pix_right]']
         self.ui.pilCutDirComboBox.clear()
         self.ui.pilCutDirComboBox.addItems(self.cutDirItems)
         self.plotfiles=[]
@@ -4221,11 +4221,15 @@ class MainWindow (QMainWindow):
         if self.det=='Bruker':
             self.updateCcdCutData()
         elif self.det=='Pilatus':
-           # print self.pilGIDshow, self.pilGISAXSshow
-            if self.pilGIDshow==0 and self.pilGISAXSshow==0:
-                self.updatePilCutData()
-            else:
-                self.updatePilGIDCutData()
+            try:
+                if self.pilGIDshow==0 and self.pilGISAXSshow==0:
+                    self.updatePilCutData()
+                else:
+                    self.updatePilGIDCutData()
+            except:
+                self.messageBox('Please enter the appropriate integral type and range')
+                self.ui.pilIntRangeLineEdit.setText('0:1024')
+                return
         
     def updateCcdCutData(self):        
         self.selCutCcdData={}
@@ -4304,7 +4308,7 @@ class MainWindow (QMainWindow):
                         fact=fact*float(self.ui.cutOffsetLineEdit.text())
         self.updateCutPlotData()
         
-    def updatePilCutData(self):  
+    def updatePilCutData(self):
         self.ui.cutPlotMplWidget.canvas.ax.clear()
         self.selCutPilData={}
         self.selCutPilErrorData={}
@@ -4314,12 +4318,12 @@ class MainWindow (QMainWindow):
             ini=float(str(self.ui.pilIntRangeLineEdit.text()).split(':')[0])
             fin=float(str(self.ui.pilIntRangeLineEdit.text()).split(':')[1])
         except:
-            self.messageBox('Please enter the range in the format "min:max"')
-            self.ui.pilIntRangeLineEdit.setText('1:1024')
+            self.messageBox('Please enter the range with the format "min:max"')
+            self.ui.pilIntRangeLineEdit.setText('0:1024')
             return
         for i in self.selectedPilFramesNums:
             self.selCutPilData[i]=self.pilData[i]#np.where(self.ccdData[i]<0,0,self.ccdData[i])#*self.absfac**self.ccd_AbsNum[i]/self.ccdMonc[i]
-            self.selCutPilErrorData[i]=self.pilErrorData[i]#np.sqrt(self.ccdErrorData[i]**2/self.ccdMonc[i]**2+self.ccdData[i]**2/self.ccdMonc[i]**3)*self.absfac**self.ccd_AbsNum[i]  
+            self.selCutPilErrorData[i]=self.pilErrorData[i]#np.sqrt(self.ccdErrorData[i]**2/self.ccdMonc[i]**2+self.ccdData[i]**2/self.ccdMonc[i]**3)*self.absfac**self.ccd_AbsNum[i]
         if self.ui.gixSumCheckBox.checkState()!=0:
             self.selCutPilData[-1]=self.selCutPilData[self.selectedPilFramesNums[0]]
             self.selCutPilErrorData[-1]=self.selCutPilErrorData[self.selectedPilFramesNums[0]]**2
@@ -4328,18 +4332,18 @@ class MainWindow (QMainWindow):
                 self.selCutPilErrorData[-1]=self.selCutPilErrorData[-1]+self.selCutPilErrorData[i]**2
             self.selCutPilData[-1]=self.selCutPilData[-1]/len(self.selectedPilFramesNums)
             self.selCutPilErrorData[-1]=np.sqrt(self.selCutPilErrorData[-1])/len(self.selectedPilFramesNums)
-            if self.ui.pilCutDirComboBox.currentText()=='H Cut':  #vertical integration; provide PixY
+            if self.ui.pilCutDirComboBox.currentIndex()==2:  #vertical integration; provide PixY
                 self.pilatus.plotVint(self.selCutPilData[-1],self.selCutPilErrorData[-1],absfac=self.absfac,absnum=self.pilSelected_AbsNum[0],cen=[self.xcenter[0],self.ycenter[0]],  hroi=None,  vroi=[max(int(ini),0), min(int(fin)+1,self.pilatus.NROWS)], ax_type=str(self.ui.pilAxesComboBox.currentText()), wavelength=self.wavelength[0],s2d_dist=self.distance[0],sh=self.pilSelected_Sh[0],alpha=self.alpha[0], dth=self.dth[0],mon=None)
                 self.cutData[-1]=self.pilatus.vintData
-            elif self.ui.pilCutDirComboBox.currentText()=='Qz Cut':
-                beta=np.arcsin(2*np.sin(self.alpha[0])-np.sin(self.truealpha[0]))  # get the beta value 
+            elif self.ui.pilCutDirComboBox.currentIndex()==0:
+                beta=np.arcsin(2*np.sin(self.alpha[0])-np.sin(self.truealpha[0]))  # get the beta value
                 ini=int(np.tan(np.arcsin(ini*self.wavelength[0]/2.0/np.pi-np.sin(self.alpha[0]))-beta)*self.pilSelected_Dist[0]/0.172)+self.ycenter[0]
                 fin=int(np.tan(np.arcsin(fin*self.wavelength[0]/2.0/np.pi-np.sin(self.alpha[0]))-beta)*self.pilSelected_Dist[0]/0.172)+self.ycenter[0]
                 #ini=-int((self.distance[0]*np.arcsin(ini*self.wavelength[0]/2.0/np.pi-np.sin(self.alpha[0]))+self.pilSelected_Sh[0])/0.172)+self.ycenter[0]
-                #fin=-int((self.distance[0]*np.arcsin(fin*self.wavelength[0]/2.0/np.pi-np.sin(self.alpha[0]))+self.pilSelected_Sh[0])/0.172)+self.ycenter[0]  
+                #fin=-int((self.distance[0]*np.arcsin(fin*self.wavelength[0]/2.0/np.pi-np.sin(self.alpha[0]))+self.pilSelected_Sh[0])/0.172)+self.ycenter[0]
                 self.pilatus.plotVint(self.selCutPilData[-1],self.selCutPilErrorData[-1],absfac=self.absfac,absnum=self.pilSelected_AbsNum[0], cen=[self.xcenter[0],self.ycenter[0]],  hroi=None,  vroi=[max(int(ini),0), min(int(fin)+1,self.pilatus.NROWS)], ax_type='Q', wavelength=self.wavelength[0],s2d_dist=self.distance[0],sh=self.pilSelected_Sh[0],alpha=self.alpha[0], dth=self.dth[0], mon=None)
                 self.cutData[-1]=self.pilatus.vintData
-            elif self.ui.pilCutDirComboBox.currentText()=='V Cut':
+            elif self.ui.pilCutDirComboBox.currentIndex()==3:
                 self.pilatus.plotHint(self.selCutPilData[-1],self.selCutPilErrorData[-1],absfac=self.absfac,absnum=self.pilSelected_AbsNum[0],cen=[self.xcenter[0],self.ycenter[0]],  hroi=[max(int(ini),0), min(int(fin)+1,self.pilatus.NCOLS)],  vroi=None, ax_type=str(self.ui.pilAxesComboBox.currentText()), wavelength=self.wavelength[0],s2d_dist=self.distance[0],sh=self.pilSelected_Sh[0],alpha=self.alpha[0], truealpha=self.truealpha[0], mon=None)
                 self.cutData[-1]=self.pilatus.hintData
             else:
@@ -4351,18 +4355,18 @@ class MainWindow (QMainWindow):
         else:
             j=0
             for i in self.selectedPilFramesNums:
-                if self.ui.pilCutDirComboBox.currentText()=='H Cut':
+                if self.ui.pilCutDirComboBox.currentIndex()==2:
                     self.pilatus.plotVint(self.selCutPilData[i],self.selCutPilErrorData[i],absfac=self.absfac,absnum=self.pilSelected_AbsNum[j], cen=[self.xcenter[j],self.ycenter[j]], hroi=None, vroi=[max(int(ini),0), min(int(fin)+1,self.pilatus.NROWS)], ax_type=str(self.ui.pilAxesComboBox.currentText()), wavelength=self.wavelength[j],s2d_dist=self.distance[j],sh=self.pilSelected_Sh[j],alpha=self.alpha[j],dth=self.dth[j], mon=None)
                     self.cutData[i]=self.pilatus.vintData
-                elif self.ui.pilCutDirComboBox.currentText()=='Qz Cut':
-                    beta=np.arcsin(2*np.sin(self.alpha[j])-np.sin(self.truealpha[j]))  # get the beta value 
+                elif self.ui.pilCutDirComboBox.currentIndex()==0:
+                    beta=np.arcsin(2*np.sin(self.alpha[j])-np.sin(self.truealpha[j]))  # get the beta value
                     ini1=int(np.tan(np.arcsin(ini*self.wavelength[j]/2.0/np.pi-np.sin(self.alpha[j]))-beta)*self.distance[j]/0.172)+self.ycenter[j]
                     fin1=int(np.tan(np.arcsin(fin*self.wavelength[j]/2.0/np.pi-np.sin(self.alpha[j]))-beta)*self.distance[j]/0.172)+self.ycenter[j]
                     #ini1=-int((self.distance[j]*np.arcsin(ini*self.wavelength[j]/2.0/np.pi-np.sin(self.alpha[j]))+self.pilSelected_Sh[j])/0.172)+self.ycenter[j]
-                    #fin1=-int((self.distance[j]*np.arcsin(fin*self.wavelength[j]/2.0/np.pi-np.sin(self.alpha[j]))+self.pilSelected_Sh[j])/0.172)+self.ycenter[j]                
+                    #fin1=-int((self.distance[j]*np.arcsin(fin*self.wavelength[j]/2.0/np.pi-np.sin(self.alpha[j]))+self.pilSelected_Sh[j])/0.172)+self.ycenter[j]
                     self.pilatus.plotVint(self.selCutPilData[i],self.selCutPilErrorData[i],absfac=self.absfac,absnum=self.pilSelected_AbsNum[j],cen=[self.xcenter[j],self.ycenter[j]],  hroi=None,  vroi=[max(int(ini1),0), min(int(fin1)+1,self.pilatus.NROWS)], ax_type='Q', wavelength=self.wavelength[j],s2d_dist=self.distance[j],sh=self.pilSelected_Sh[j],alpha=self.alpha[j], dth=self.dth[j], mon=None)
-                    self.cutData[i]=self.pilatus.vintData    
-                elif self.ui.pilCutDirComboBox.currentText()=='V Cut':
+                    self.cutData[i]=self.pilatus.vintData
+                elif self.ui.pilCutDirComboBox.currentIndex()==3:
                     self.pilatus.plotHint(self.selCutPilData[i],self.selCutPilErrorData[i],absfac=self.absfac,absnum=self.pilSelected_AbsNum[j],cen=[self.xcenter[j],self.ycenter[j]], hroi=[max(int(ini),0), min(int(fin)+1,self.pilatus.NCOLS)],  vroi=None, ax_type=str(self.ui.pilAxesComboBox.currentText()), wavelength=self.wavelength[j],s2d_dist=self.distance[j],sh=self.pilSelected_Sh[j],alpha=self.alpha[j],truealpha=self.truealpha[j], mon=None)
                     self.cutData[i]=self.pilatus.hintData
                 else:
@@ -4379,7 +4383,7 @@ class MainWindow (QMainWindow):
                 self.ui.cutPlotMplWidget.canvas.ax.errorbar(self.cutData[-1][:,0],self.cutData[-1][:,1],self.cutData[-1][:,2],fmt='o-',label=self.cutLabel[-1])
             else:
                 self.ui.cutPlotMplWidget.canvas.ax.plot(self.cutData[-1][:,0],self.cutData[-1][:,1],'o',label=self.cutLabel[-1])
-                
+
         else:
             fact=1
             if self.ui.cutErrorbarCheckBox.checkState()!=0:
@@ -4387,58 +4391,56 @@ class MainWindow (QMainWindow):
                     self.ui.cutPlotMplWidget.canvas.ax.errorbar(self.cutData[i][:,0],fact*self.cutData[i][:,1],fact*self.cutData[i][:,2],fmt='-',label=self.cutLabel[i])
                     if self.ui.cutOffsetCheckBox.checkState()!=0:
                         fact=fact*float(self.ui.cutOffsetLineEdit.text())
-            else:      
+            else:
                 for i in self.selectedPilFramesNums:
                     self.ui.cutPlotMplWidget.canvas.ax.plot(self.cutData[i][:,0],fact*self.cutData[i][:,1],'-',label=self.cutLabel[i])
                     if self.ui.cutOffsetCheckBox.checkState()!=0:
                         fact=fact*float(self.ui.cutOffsetLineEdit.text())
         self.updateCutPlotData()
-    
+
     def updatePilGIDCutData(self):
         self.ui.cutPlotMplWidget.canvas.ax.clear()
         try:
             start=float(self.ui.pilIntRangeLineEdit.text().split(':')[0])
             end=float(self.ui.pilIntRangeLineEdit.text().split(':')[1])
         except:
-            self.messageBox('Please enter the range in the format "min:max"')
-            self.ui.pilIntRangeLineEdit.setText('1:1024')
+            self.messageBox('Please enter the range with the format "min:max"')
+            self.ui.pilIntRangeLineEdit.setText('0:1024')
             return
-        if str(self.ui.pilAxesComboBox.currentText())=='Angles':   
-            if str(self.ui.pilCutDirComboBox.currentText())=='H Cut':
-                ini=np.where(self.pilGIDYAxs[:,0]>=start)[0][0]
-                fin=np.where(self.pilGIDYAxs[:,0]<=end)[0][-1]
-                xaxis=self.pilGIDXAxs[0,:]
-                self.cutData=np.vstack((xaxis,np.sum(self.pilGIDData[ini:fin,:],axis=0),np.sqrt(np.sum(self.pilGIDDataErr[ini:fin,:]**2,axis=0)))).transpose()
-            elif str(self.ui.pilCutDirComboBox.currentText())=='V Cut':
-                ini=np.where(self.pilGIDXAxs[0,:]>=start)[0][0]
-                fin=np.where(self.pilGIDXAxs[0,:]<=end)[0][-1]
-                xaxis=self.pilGIDYAxs[:,0]
-                self.cutData=np.vstack((xaxis,np.sum(self.pilGIDData[:,ini:fin],axis=1),np.sqrt(np.sum(self.pilGIDDataErr[:,ini:fin]**2,axis=1)))).transpose()
-        elif str(self.ui.pilAxesComboBox.currentText())=='Q':
-            if self.pilGISAXSshow==0:
-                if str(self.ui.pilCutDirComboBox.currentText())=='H Cut':
-                    ini=np.where(self.pilGIDYAxs_Q[:,0]>=start)[0][0]
-                    fin=np.where(self.pilGIDYAxs_Q[:,0]<=end)[0][-1]
-                    xaxis=self.pilGIDXAxs_Q[0,:]
-                    self.cutData=np.vstack((xaxis,np.sum(self.pilGIDData_Q[ini:fin,:],axis=0),np.sqrt(np.sum(self.pilGIDDataErr_Q[ini:fin,:]**2,axis=0)))).transpose()
-                elif str(self.ui.pilCutDirComboBox.currentText())=='V Cut':
-                    ini=np.where(self.pilGIDXAxs_Q[0,:]>=start)[0][0]
-                    fin=np.where(self.pilGIDXAxs_Q[0,:]<=end)[0][-1]
-                    xaxis=self.pilGIDYAxs_Q[:,0]
-                    self.cutData=np.vstack((xaxis,np.sum(self.pilGIDData_Q[:,ini:fin],axis=1),np.sqrt(np.sum(self.pilGIDDataErr_Q[:,ini:fin]**2,axis=1)))).transpose()
-            else:
-               # print 'I am here'
-                if str(self.ui.pilCutDirComboBox.currentText())=='H Cut':
-                    ini=np.where(self.pilYbin[:,0]>=start)[0][0]
-                    fin=np.where(self.pilYbin[:,0]<=end)[0][-1]
-                   # print ini, fin
-                    xaxis=self.pilXbin[0,:]
-                    self.cutData=np.vstack((xaxis,np.sum(self.pilDataBin[ini:fin,:],axis=0),np.sqrt(np.sum(self.pilErrorDataBin[ini:fin,:]**2,axis=0)))).transpose()
-                elif str(self.ui.pilCutDirComboBox.currentText())=='V Cut':
-                    ini=np.where(self.pilXbin[0,:]>=start)[0][0]
-                    fin=np.where(self.pilXbin[0,:]<=end)[0][-1]
-                    xaxis=self.pilYbin[:,0]
-                    self.cutData=np.vstack((xaxis,np.sum(self.pilDataBin[:,ini:fin],axis=1),np.sqrt(np.sum(self.pilErrorDataBin[:,ini:fin]**2,axis=1)))).transpose()
+        # if str(self.ui.pilAxesComboBox.currentText())=='Angles':
+        #     if str(self.ui.pilCutDirComboBox.currentText())=='H Cut':
+        #         ini=np.where(self.pilGIDYAxs[:,0]>=start)[0][0]
+        #         fin=np.where(self.pilGIDYAxs[:,0]<=end)[0][-1]
+        #         xaxis=self.pilGIDXAxs[0,:]
+        #         self.cutData=np.vstack((xaxis,np.sum(self.pilGIDData[ini:fin,:],axis=0),np.sqrt(np.sum(self.pilGIDDataErr[ini:fin,:]**2,axis=0)))).transpose()
+        #     elif str(self.ui.pilCutDirComboBox.currentText())=='V Cut':
+        #         ini=np.where(self.pilGIDXAxs[0,:]>=start)[0][0]
+        #         fin=np.where(self.pilGIDXAxs[0,:]<=end)[0][-1]
+        #         xaxis=self.pilGIDYAxs[:,0]
+        #         self.cutData=np.vstack((xaxis,np.sum(self.pilGIDData[:,ini:fin],axis=1),np.sqrt(np.sum(self.pilGIDDataErr[:,ini:fin]**2,axis=1)))).transpose()
+        # elif str(self.ui.pilAxesComboBox.currentText())=='Q':
+        if self.pilGISAXSshow==0:
+            if self.ui.pilCutDirComboBox.currentIndex()==0:
+                ini=np.where(self.pilGIDYAxs_Q[:,0]>=start)[0][0]
+                fin=np.where(self.pilGIDYAxs_Q[:,0]<=end)[0][-1]
+                xaxis=self.pilGIDXAxs_Q[0,:]
+                self.cutData=np.vstack((xaxis,np.sum(self.pilGIDData_Q[ini:fin,:],axis=0),np.sqrt(np.sum(self.pilGIDDataErr_Q[ini:fin,:]**2,axis=0)))).transpose()
+            elif self.ui.pilCutDirComboBox.currentIndex()==1:
+                ini=np.where(self.pilGIDXAxs_Q[0,:]>=start)[0][0]
+                fin=np.where(self.pilGIDXAxs_Q[0,:]<=end)[0][-1]
+                xaxis=self.pilGIDYAxs_Q[:,0]
+                self.cutData=np.vstack((xaxis,np.sum(self.pilGIDData_Q[:,ini:fin],axis=1),np.sqrt(np.sum(self.pilGIDDataErr_Q[:,ini:fin]**2,axis=1)))).transpose()
+        else:
+            if self.ui.pilCutDirComboBox.currentIndex()==0:
+                ini=np.where(self.pilYbin[:,0]>=start)[0][0]
+                fin=np.where(self.pilYbin[:,0]<=end)[0][-1]
+                xaxis=self.pilXbin[0,:]
+                self.cutData=np.vstack((xaxis,np.sum(self.pilDataBin[ini:fin,:],axis=0),np.sqrt(np.sum(self.pilErrorDataBin[ini:fin,:]**2,axis=0)))).transpose()
+            elif self.ui.pilCutDirComboBox.currentIndex()==1:
+                ini=np.where(self.pilXbin[0,:]>=start)[0][0]
+                fin=np.where(self.pilXbin[0,:]<=end)[0][-1]
+                xaxis=self.pilYbin[:,0]
+                self.cutData=np.vstack((xaxis,np.sum(self.pilDataBin[:,ini:fin],axis=1),np.sqrt(np.sum(self.pilErrorDataBin[:,ini:fin]**2,axis=1)))).transpose()
         if self.ui.cutErrorbarCheckBox.checkState()!=0:
             self.ui.cutPlotMplWidget.canvas.ax.errorbar(self.cutData[:,0],self.cutData[:,1],self.cutData[:,2],fmt='b-',label='GID Cut')
         else:
@@ -4456,22 +4458,22 @@ class MainWindow (QMainWindow):
         self.ui.cutPlotMplWidget.canvas.ax.grid(b=False)
         title='File: '+self.specFileName+' S# '+str([item for item in np.sort(self.selectedScanNums)])[1:-1]
         if self.det=='Pilatus':
-            currentcutindex=self.ui.pilCutDirComboBox.currentText()
+            currentcutindex=self.ui.pilCutDirComboBox.currentIndex()
             cutrange=str(self.ui.pilIntRangeLineEdit.text())
         elif self.det=='Bruker':
             currentcutindex=self.ui.gixCutDirComboBox.currentText()
             cutrange=str(self.ui.gixIntRangeLineEdit.text())
-        if currentcutindex=='H Cut':
+        if currentcutindex==2:
             self.ui.cutPlotMplWidget.canvas.ax.set_title(title+'\n'+'H Cut     Vint Range['+cutrange+']', fontsize=16)
             self.ui.cutPlotMplWidget.canvas.ax.set_xlabel('Pixels', fontsize=16)
-        elif currentcutindex=='V Cut':
+        elif currentcutindex==3:
             self.ui.cutPlotMplWidget.canvas.ax.set_title(title+'\n'+'V Cut     Hint Range['+cutrange+']', fontsize=16)
             self.ui.cutPlotMplWidget.canvas.ax.set_xlabel('Pixels', fontsize=16)
-        elif currentcutindex=='Qz Cut':
-            self.ui.cutPlotMplWidget.canvas.ax.set_title(title+'\n'+'Qz Cut     Qz Range['+cutrange+']', fontsize=16)
+        elif currentcutindex==0:
+            self.ui.cutPlotMplWidget.canvas.ax.set_title(title+'\n'+'Q H Cut     Qz Range['+cutrange+']', fontsize=16)
             self.ui.cutPlotMplWidget.canvas.ax.set_xlabel(r'$Q_{xy}$'+' '+r'$[\AA^{-1}]$', fontsize=16)
         else:
-            self.ui.cutPlotMplWidget.canvas.ax.set_title(title+'\n'+'Qxy Cut     Qxy Range['+cutrange+']', fontsize=16)
+            self.ui.cutPlotMplWidget.canvas.ax.set_title(title+'\n'+'Q V Cut     Qxy Range['+cutrange+']', fontsize=16)
             self.ui.cutPlotMplWidget.canvas.ax.set_xlabel(r'$Q_z$'+' '+r'$[\AA^{-1}]$', fontsize=16)
         if self.cutLogX!=0:
             self.ui.cutPlotMplWidget.canvas.ax.set_xscale('log')

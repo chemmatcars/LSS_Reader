@@ -1460,22 +1460,22 @@
             <widget class="QComboBox" name="pilCutDirComboBox">
              <item>
               <property name="text">
-               <string>H Cut</string>
+               <string>Q H Cut [Qz_min : Qz_max]</string>
               </property>
              </item>
              <item>
               <property name="text">
-               <string>V Cut</string>
+               <string>Q V Cut [Qxy_min : Qxy_max]</string>
               </property>
              </item>
              <item>
               <property name="text">
-               <string>Qz Cut</string>
+               <string>Pix H Cut [Pix_bottom : Pix_top]</string>
               </property>
              </item>
              <item>
               <property name="text">
-               <string>Qxy Cut</string>
+               <string>Pix V Cut [Pix_left : Pix_right]</string>
               </property>
              </item>
             </widget>
@@ -1483,14 +1483,14 @@
            <item>
             <widget class="QLabel" name="label_17">
              <property name="text">
-              <string>Int Range:</string>
+              <string>Int Range: min:max</string>
              </property>
             </widget>
            </item>
            <item>
             <widget class="QLineEdit" name="pilIntRangeLineEdit">
              <property name="text">
-              <string>1:1024</string>
+              <string>0:1024</string>
              </property>
             </widget>
            </item>
