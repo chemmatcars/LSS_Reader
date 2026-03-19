@@ -871,13 +871,13 @@ class MainWindow (QMainWindow):
             self.ui.specPlotMplWidget.canvas.ax.set_ylabel(str(self.ui.spYComboBox.currentText()))
         else:
             self.ui.specPlotMplWidget.canvas.ax.set_ylabel(str(self.ui.spYComboBox.currentText())+' and '+str(self.ui.spY2ComboBox.currentText()))
-        self.ui.specPlotMplWidget.canvas.ax.grid(b=False)
+        self.ui.specPlotMplWidget.canvas.ax.grid(visible=False)
         if self.spLogX!=0:
             self.ui.specPlotMplWidget.canvas.ax.set_xscale('log')
         if self.spLogY!=0:
             self.ui.specPlotMplWidget.canvas.ax.set_yscale('log')
         if self.spGrid!=0:
-            self.ui.specPlotMplWidget.canvas.ax.grid(b=True,color='r',linestyle='--')
+            self.ui.specPlotMplWidget.canvas.ax.grid(visible=True,color='r',linestyle='--')
         if self.ui.spLegendCheckBox.checkState()!=0:
             self.ui.specPlotMplWidget.canvas.ax.legend(loc=self.ui.spLegendLocComboBox.currentIndex()+1,frameon=False,scatterpoints=0,numpoints=1)
         self.ui.specPlotMplWidget.canvas.draw()
@@ -1072,13 +1072,13 @@ class MainWindow (QMainWindow):
 
 
 
-        self.ui.mcaPlotMplWidget.canvas.ax.grid(b=False)
+        self.ui.mcaPlotMplWidget.canvas.ax.grid(visible=False)
         if self.mcaLogX!=0:
             self.ui.mcaPlotMplWidget.canvas.ax.set_xscale('log')
         if self.mcaLogY!=0:
             self.ui.mcaPlotMplWidget.canvas.ax.set_yscale('log')
         if self.mcaGrid!=0:
-            self.ui.mcaPlotMplWidget.canvas.ax.grid(b=True,color='r',linestyle='--')
+            self.ui.mcaPlotMplWidget.canvas.ax.grid(visible=True,color='r',linestyle='--')
         if self.ui.mcaLegendCheckBox.checkState()!=0:
             self.ui.mcaPlotMplWidget.canvas.ax.legend(loc=self.ui.mcaLegendLocComboBox.currentIndex()+1,frameon=False,scatterpoints=0,numpoints=1)
         else:
@@ -4225,7 +4225,11 @@ class MainWindow (QMainWindow):
                 if self.pilGIDshow==0 and self.pilGISAXSshow==0:
                     self.updatePilCutData()
                 else:
-                    self.updatePilGIDCutData()
+                    if self.ui.pilCutDirComboBox.currentIndex()==0 or self.ui.pilCutDirComboBox.currentIndex()==1:
+                        self.updatePilGIDCutData()
+                    else:
+                        self.messageBox('Please use one of Q cuts for GID data')
+                        return
             except:
                 self.messageBox('Please enter the appropriate integral type and range')
                 self.ui.pilIntRangeLineEdit.setText('0:1024')
@@ -4455,7 +4459,7 @@ class MainWindow (QMainWindow):
         self.ui.cutPlotMplWidget.canvas.ax.set_xscale('linear')
         self.ui.cutPlotMplWidget.canvas.ax.set_yscale('linear')
         self.ui.cutPlotMplWidget.canvas.ax.set_ylabel('Intensity')
-        self.ui.cutPlotMplWidget.canvas.ax.grid(b=False)
+        self.ui.cutPlotMplWidget.canvas.ax.grid(visible=False)
         title='File: '+self.specFileName+' S# '+str([item for item in np.sort(self.selectedScanNums)])[1:-1]
         if self.det=='Pilatus':
             currentcutindex=self.ui.pilCutDirComboBox.currentIndex()
@@ -4480,7 +4484,7 @@ class MainWindow (QMainWindow):
         if self.cutLogY!=0:
             self.ui.cutPlotMplWidget.canvas.ax.set_yscale('log')
         if self.cutGrid!=0:
-            self.ui.cutPlotMplWidget.canvas.ax.grid(b=True,color='r',linestyle='--')
+            self.ui.cutPlotMplWidget.canvas.ax.grid(visible=True,color='r',linestyle='--')
         if self.ui.cutLegendCheckBox.checkState()!=0:
             self.ui.cutPlotMplWidget.canvas.ax.legend(loc=self.ui.cutLegendLocComboBox.currentIndex()+1,frameon=False,scatterpoints=0,numpoints=1)
         self.ui.cutPlotMplWidget.canvas.draw()
@@ -4771,7 +4775,7 @@ class MainWindow (QMainWindow):
         if self.ui.plotLogYCheckBox.checkState()!=0:
             self.ui.PlotMplWidget.canvas.ax.set_yscale('log')
         if self.ui.plotGridCheckBox.checkState()!=0:
-            self.ui.PlotMplWidget.canvas.ax.grid(b=True,color='r',linestyle='--')    
+            self.ui.PlotMplWidget.canvas.ax.grid(visible=True,color='r',linestyle='--')
         if self.ui.plotLegendCheckBox.checkState()!=0:
             self.ui.PlotMplWidget.canvas.ax.legend(loc=self.ui.plotLegendLocComboBox.currentIndex()+1,frameon=False,scatterpoints=0,numpoints=1)
         self.ui.PlotMplWidget.canvas.ax.set_xlabel('X', fontsize=labelsize)
@@ -4808,7 +4812,7 @@ class MainWindow (QMainWindow):
         if self.ui.plotLogYCheckBox.checkState()!=0:
             self.ui.PlotMplWidget.canvas.ax.set_yscale('log')
         if self.ui.plotGridCheckBox.checkState()!=0:
-            self.ui.PlotMplWidget.canvas.ax.grid(b=True,color='r',linestyle='--')    
+            self.ui.PlotMplWidget.canvas.ax.grid(visible=True,color='r',linestyle='--')
         if self.ui.plotLegendCheckBox.checkState()!=0:
             self.ui.PlotMplWidget.canvas.ax.legend(loc=self.ui.plotLegendLocComboBox.currentIndex()+1,frameon=False,scatterpoints=0,numpoints=1)
         self.ui.PlotMplWidget.canvas.ax.set_xlabel('X', fontsize=labelsize)
