@@ -2245,7 +2245,7 @@ class MainWindow (QMainWindow):
     
     def pilBurnTest(self):
         self.pilSelectedQxs=[self.pilFileQxs[i] for i in self.selectedPilFramesNums]
-        if self.pilSelectedQxs.count(self.pilSelectedQxs[0])!=len(self.pilSelectedQxs) or self.pilSelectedQzs.count(self.pilSelectedQzs[0])!=len(self.pilSelectedQzs) or self.pilSelectedScanNum.count(self.pilSelectedScanNum[0])!=len(self.pilSelectedScanNum):
+        if  self.pilSelectedQxs.count(self.pilSelectedQxs[0])!=len(self.pilSelectedQxs) or self.pilSelectedQzs.count(self.pilSelectedQzs[0])!=len(self.pilSelectedQzs) or self.pilSelectedScanNum.count(self.pilSelectedScanNum[0])!=len(self.pilSelectedScanNum):
             self.messageBox('Warning: It is not a burn test scan or multiple scans are selected!')
         else:
             Dialog=QDialog(self)                
@@ -2296,17 +2296,21 @@ class MainWindow (QMainWindow):
             x=data[:,0]
             y=data[:,1]
             yerr=data[:,2]
-            pfit,pcov=curve_fit(self.expdecay,x,y,p0=[y[0],(x[-1]-x[0])/np.log(y[0]/y[-1])],sigma=yerr,maxfev=5000)
-            tauerr=int(pcov[1][1]**0.5)
-            tau=int(pfit[1])
-            self.uipdburn.plotWidget.canvas.ax.errorbar(x,y,yerr,fmt='o-')
-            self.uipdburn.plotWidget.canvas.ax.plot(x,self.expdecay(x,pfit[0],pfit[1]),'r--',label=r'$\tau$'+' = '+str(format(tau,'.1e'))+' ('+str(format(tauerr,'.1e'))+') sec.')
-            self.uipdburn.plotWidget.canvas.ax.legend(loc=1,frameon=False,scatterpoints=0,numpoints=1) 
-            self.uipdburn.plotWidget.canvas.ax.set_xlim(x[0],x[-1])
-            self.uipdburn.plotWidget.canvas.ax.set_title('File: '+self.specFileName+' S# '+str([item for item in np.sort(self.selectedScanNums)])[1:-1])
-            self.uipdburn.plotWidget.canvas.draw()
-            self.command='REF Burn, scan='+str(self.selectedScanNums)
-            self.ui.commandLineEdit.setText(self.command)  
+            try:
+                pfit,pcov=curve_fit(self.expdecay,x,y,p0=[y[0],(x[-1]-x[0])/np.log(y[0]/y[-1])],sigma=yerr,maxfev=5000)
+                tauerr=int(pcov[1][1]**0.5)
+                tau=int(pfit[1])
+                self.uipdburn.plotWidget.canvas.ax.errorbar(x,y,yerr,fmt='o-')
+                self.uipdburn.plotWidget.canvas.ax.plot(x,self.expdecay(x,pfit[0],pfit[1]),'r--',label=r'$\tau$'+' = '+str(format(tau,'.1e'))+' ('+str(format(tauerr,'.1e'))+') sec.')
+                self.uipdburn.plotWidget.canvas.ax.legend(loc=1,frameon=False,scatterpoints=0,numpoints=1)
+                self.uipdburn.plotWidget.canvas.ax.set_xlim(x[0],x[-1])
+                self.uipdburn.plotWidget.canvas.ax.set_title('File: '+self.specFileName+' S# '+str([item for item in np.sort(self.selectedScanNums)])[1:-1])
+                self.uipdburn.plotWidget.canvas.draw()
+                self.command='REF Burn, scan='+str(self.selectedScanNums)
+                self.ui.commandLineEdit.setText(self.command)
+            except:
+                self.messageBox('Warning: It seems there is not enough data points for burn test fitting (min: 3 points)!')
+                return
             
     def pilGidBurn(self):
         if self.uipdburn.gidComboBox.currentIndex()==0:
@@ -2350,30 +2354,34 @@ class MainWindow (QMainWindow):
                 x=data[:,0]
                 y=data[:,1]
                 yerr=data[:,2]
-                if self.uipdburn.gidComboBox.currentText()=='Location':
-                    self.uipdburn.plotWidget.canvas.ax.set_ylabel('Relative Location '+r'$[\AA^{-1}]$')
-                    y=4.0*np.pi*np.sin((self.pilSelected_Dth[0]+(data[:,1]-cen)*0.172/self.pilSelected_PDist[0])/2.0)/self.pilSelected_Wavelength[0]
-                    yerr=4.0*np.pi*np.cos((self.pilSelected_Dth[0]+(data[:,1]-cen)*0.172/self.pilSelected_PDist[0])/2.0)/self.pilSelected_Wavelength[0]*data[:,2]*0.172/2/self.pilSelected_PDist[0]
-                    y=y-y[0]
-                if self.uipdburn.gidComboBox.currentText()=='Width':
-                    self.uipdburn.plotWidget.canvas.ax.set_ylabel('FWHM '+r'$[\AA^{-1}]$')
-                    y=np.sqrt(y)
-                    yerr=0.5/y*yerr
-                    y=4.0*np.pi*np.sin((data[:,1]*0.172/self.pilSelected_PDist[0])/2.0)/self.pilSelected_Wavelength[0]
-                    yerr=4.0*np.pi*np.cos((data[:,1]*0.172/self.pilSelected_PDist[0])/2.0)/self.pilSelected_Wavelength[0]*data[:,2]*0.172/2/self.pilSelected_PDist[0]
-                self.uipdburn.plotWidget.canvas.ax.errorbar(x,y,yerr,fmt='o-')
-                if self.uipdburn.gidComboBox.currentText()=='Intensity':
-                    self.uipdburn.plotWidget.canvas.ax.set_ylabel('Intensity')
-                    pfit,pcov=curve_fit(self.expdecay,x,y,p0=[y[0],(x[-1]-x[0])/np.log(y[0]/y[-1])],sigma=yerr,maxfev=5000)
-                    tauerr=int(pcov[1][1]**0.5)
-                    tau=int(pfit[1])
-                    self.uipdburn.plotWidget.canvas.ax.plot(x,self.expdecay(x,pfit[0],pfit[1]),'r--',label=r'$\tau$'+' = '+str(format(tau,'.1e'))+' ('+str(format(tauerr,'.1e'))+') sec.')
-                    self.uipdburn.plotWidget.canvas.ax.legend(loc=1,frameon=False,scatterpoints=0,numpoints=1)
-                self.uipdburn.plotWidget.canvas.ax.set_xlim(x[0],x[-1])
-                self.uipdburn.plotWidget.canvas.ax.set_title('File: '+self.specFileName+' S# '+str([item for item in np.sort(self.selectedScanNums)])[1:-1])
-                self.uipdburn.plotWidget.canvas.draw()
-                self.command='GID Burn, scan='+str(self.selectedScanNums)+', Qz range=['+str(self.uipdburn.rangeLineEdit.text())+'], mode='+str(self.uipdburn.gidComboBox.currentText())
-                self.ui.commandLineEdit.setText(self.command)
+                try:
+                    if self.uipdburn.gidComboBox.currentText()=='Location':
+                        self.uipdburn.plotWidget.canvas.ax.set_ylabel('Relative Location '+r'$[\AA^{-1}]$')
+                        y=4.0*np.pi*np.sin((self.pilSelected_Dth[0]+(data[:,1]-cen)*0.172/self.pilSelected_PDist[0])/2.0)/self.pilSelected_Wavelength[0]
+                        yerr=4.0*np.pi*np.cos((self.pilSelected_Dth[0]+(data[:,1]-cen)*0.172/self.pilSelected_PDist[0])/2.0)/self.pilSelected_Wavelength[0]*data[:,2]*0.172/2/self.pilSelected_PDist[0]
+                        y=y-y[0]
+                    if self.uipdburn.gidComboBox.currentText()=='Width':
+                        self.uipdburn.plotWidget.canvas.ax.set_ylabel('FWHM '+r'$[\AA^{-1}]$')
+                        y=np.sqrt(y)
+                        yerr=0.5/y*yerr
+                        y=4.0*np.pi*np.sin((data[:,1]*0.172/self.pilSelected_PDist[0])/2.0)/self.pilSelected_Wavelength[0]
+                        yerr=4.0*np.pi*np.cos((data[:,1]*0.172/self.pilSelected_PDist[0])/2.0)/self.pilSelected_Wavelength[0]*data[:,2]*0.172/2/self.pilSelected_PDist[0]
+                    self.uipdburn.plotWidget.canvas.ax.errorbar(x,y,yerr,fmt='o-')
+                    if self.uipdburn.gidComboBox.currentText()=='Intensity':
+                        self.uipdburn.plotWidget.canvas.ax.set_ylabel('Intensity')
+                        pfit,pcov=curve_fit(self.expdecay,x,y,p0=[y[0],(x[-1]-x[0])/np.log(y[0]/y[-1])],sigma=yerr,maxfev=5000)
+                        tauerr=int(pcov[1][1]**0.5)
+                        tau=int(pfit[1])
+                        self.uipdburn.plotWidget.canvas.ax.plot(x,self.expdecay(x,pfit[0],pfit[1]),'r--',label=r'$\tau$'+' = '+str(format(tau,'.1e'))+' ('+str(format(tauerr,'.1e'))+') sec.')
+                        self.uipdburn.plotWidget.canvas.ax.legend(loc=1,frameon=False,scatterpoints=0,numpoints=1)
+                    self.uipdburn.plotWidget.canvas.ax.set_xlim(x[0],x[-1])
+                    self.uipdburn.plotWidget.canvas.ax.set_title('File: '+self.specFileName+' S# '+str([item for item in np.sort(self.selectedScanNums)])[1:-1])
+                    self.uipdburn.plotWidget.canvas.draw()
+                    self.command='GID Burn, scan='+str(self.selectedScanNums)+', Qz range=['+str(self.uipdburn.rangeLineEdit.text())+'], mode='+str(self.uipdburn.gidComboBox.currentText())
+                    self.ui.commandLineEdit.setText(self.command)
+                except:
+                    self.messageBox('Warning: It seems there is not enough data points for burn test fitting (min: 3 points)!')
+                    return
                  
     def pilGISAXS(self):
         if str(self.ui.gisaxsComboBox.currentText())=='Show GISAXS':
@@ -4235,7 +4243,7 @@ class MainWindow (QMainWindow):
                         return
             except:
                 self.messageBox('Please enter the appropriate integral type and range')
-                self.ui.pilIntRangeLineEdit.setText('0:1024')
+                self.ui.pilIntRangeLineEdit.setText('0:1')
                 return
         
     def updateCcdCutData(self):        
@@ -4326,7 +4334,7 @@ class MainWindow (QMainWindow):
             fin=float(str(self.ui.pilIntRangeLineEdit.text()).split(':')[1])
         except:
             self.messageBox('Please enter the range with the format "min:max"')
-            self.ui.pilIntRangeLineEdit.setText('0:1024')
+            self.ui.pilIntRangeLineEdit.setText('0:1')
             return
         for i in self.selectedPilFramesNums:
             self.selCutPilData[i]=self.pilData[i]#np.where(self.ccdData[i]<0,0,self.ccdData[i])#*self.absfac**self.ccd_AbsNum[i]/self.ccdMonc[i]
@@ -4412,7 +4420,7 @@ class MainWindow (QMainWindow):
             end=float(self.ui.pilIntRangeLineEdit.text().split(':')[1])
         except:
             self.messageBox('Please enter the range with the format "min:max"')
-            self.ui.pilIntRangeLineEdit.setText('0:1024')
+            self.ui.pilIntRangeLineEdit.setText('0:1')
             return
         # if str(self.ui.pilAxesComboBox.currentText())=='Angles':
         #     if str(self.ui.pilCutDirComboBox.currentText())=='H Cut':

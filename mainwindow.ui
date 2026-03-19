@@ -1490,7 +1490,7 @@
            <item>
             <widget class="QLineEdit" name="pilIntRangeLineEdit">
              <property name="text">
-              <string>0:1024</string>
+              <string>0:1</string>
              </property>
             </widget>
            </item>
