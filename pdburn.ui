@@ -53,7 +53,7 @@
      <item>
       <widget class="QLabel" name="qzranLabel">
        <property name="text">
-        <string>Qxy range</string>
+        <string>Qxy range (single peak only)</string>
        </property>
       </widget>
      </item>

@@ -457,6 +457,7 @@ class MainWindow (QMainWindow):
         self.ui.twodMinHorizontalSlider.sliderReleased.connect(self.update2dMinSlider)
      #    self.connect(self.ui.twodMaxHorizontalSlider, SIGNAL('sliderReleased()'), self.update2dMaxSlider)
         self.ui.twodMaxHorizontalSlider.sliderReleased.connect(self.update2dMaxSlider)
+        self.ui.pilCutDirComboBox.currentIndexChanged.connect(self.updatePilCutRange)
 
     def initValidator(self):
         qdoublevalidator1 = DoubleValidator(self, bottom=1)
@@ -2380,7 +2381,7 @@ class MainWindow (QMainWindow):
                     self.command='GID Burn, scan='+str(self.selectedScanNums)+', Qz range=['+str(self.uipdburn.rangeLineEdit.text())+'], mode='+str(self.uipdburn.gidComboBox.currentText())
                     self.ui.commandLineEdit.setText(self.command)
                 except:
-                    self.messageBox('Warning: It seems there is not enough data points for burn test fitting (min: 3 points)!')
+                    self.messageBox('Warning: It seems there is either not enough data points for burn test fitting (min: 3 points) or selected Qxy range is not correct!')
                     return
                  
     def pilGISAXS(self):
@@ -4243,9 +4244,10 @@ class MainWindow (QMainWindow):
                         return
             except:
                 self.messageBox('Please enter the appropriate integral type and range')
-                self.ui.pilIntRangeLineEdit.setText('0:1')
+                self.updatePilCutRange()
                 return
-        
+
+
     def updateCcdCutData(self):        
         self.selCutCcdData={}
         self.selCutCcdErrorData={}
@@ -4322,7 +4324,17 @@ class MainWindow (QMainWindow):
                     if self.ui.cutOffsetCheckBox.checkState()!=0:
                         fact=fact*float(self.ui.cutOffsetLineEdit.text())
         self.updateCutPlotData()
-        
+
+    def updatePilCutRange(self):
+        if self.ui.pilCutDirComboBox.currentIndex()==0:
+            self.ui.pilIntRangeLineEdit.setText('0:1')
+        elif self.ui.pilCutDirComboBox.currentIndex()==1:
+            self.ui.pilIntRangeLineEdit.setText('1:2')
+        elif self.ui.pilCutDirComboBox.currentIndex()==2:
+            self.ui.pilIntRangeLineEdit.setText('0:485')
+        elif self.ui.pilCutDirComboBox.currentIndex() ==3:
+            self.ui.pilIntRangeLineEdit.setText('0:194')
+
     def updatePilCutData(self):
         self.ui.cutPlotMplWidget.canvas.ax.clear()
         self.selCutPilData={}
@@ -4334,7 +4346,7 @@ class MainWindow (QMainWindow):
             fin=float(str(self.ui.pilIntRangeLineEdit.text()).split(':')[1])
         except:
             self.messageBox('Please enter the range with the format "min:max"')
-            self.ui.pilIntRangeLineEdit.setText('0:1')
+            sself.updatePilCutRange()
             return
         for i in self.selectedPilFramesNums:
             self.selCutPilData[i]=self.pilData[i]#np.where(self.ccdData[i]<0,0,self.ccdData[i])#*self.absfac**self.ccd_AbsNum[i]/self.ccdMonc[i]
@@ -4420,7 +4432,7 @@ class MainWindow (QMainWindow):
             end=float(self.ui.pilIntRangeLineEdit.text().split(':')[1])
         except:
             self.messageBox('Please enter the range with the format "min:max"')
-            self.ui.pilIntRangeLineEdit.setText('0:1')
+            self.updatePilCutRange()
             return
         # if str(self.ui.pilAxesComboBox.currentText())=='Angles':
         #     if str(self.ui.pilCutDirComboBox.currentText())=='H Cut':

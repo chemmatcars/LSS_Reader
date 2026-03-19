@@ -263,7 +263,7 @@
       </widget>
       <widget class="QTabWidget" name="PlotWidget">
        <property name="currentIndex">
-        <number>2</number>
+        <number>0</number>
        </property>
        <widget class="QWidget" name="specPlotTab">
         <attribute name="title">
@@ -345,6 +345,9 @@
             <widget class="QCheckBox" name="spNCheckBox">
              <property name="text">
               <string/>
+             </property>
+             <property name="checked">
+              <bool>true</bool>
              </property>
             </widget>
            </item>
