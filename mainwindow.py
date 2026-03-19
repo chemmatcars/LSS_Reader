@@ -2309,68 +2309,71 @@ class MainWindow (QMainWindow):
             self.ui.commandLineEdit.setText(self.command)  
             
     def pilGidBurn(self):
-        if self.pilSelected_Dth[0]==0:
-            self.messageBox('Warning: It is not a GID burn test. Please click REF burn test button!')
+        if self.uipdburn.gidComboBox.currentIndex()==0:
+            return
         else:
-            ctime=float(self.scanlines[self.selectedScanNums[0]-1].split(' ')[-1])  #get the counting time
-            scan=self.scanlines[self.selectedScanNums[0]-1].split(' ')[1] #get scan number
-            self.uipdburn.Label.setText('Burn test for Scan #'+scan)
-            ini=float(self.uipdburn.rangeLineEdit.text().split(':')[0]) #get the  ini qz value from lineedit
-            fin=float(self.uipdburn.rangeLineEdit.text().split(':')[1]) #get the final qz value from lineedit
-            cen=self.pilatus.NCOLS-self.pilSelectedX[0]-1
-            ini=max(int((2.0*np.arcsin(ini*self.pilSelected_Wavelength[0]/4.0/np.pi)-self.pilSelected_Dth[0])*self.pilSelected_PDist[0]/0.172)+cen,0) # conver it to pixel and check with the boundary 
-            fin=min(int((2.0*np.arcsin(fin*self.pilSelected_Wavelength[0]/4.0/np.pi)-self.pilSelected_Dth[0])*self.pilSelected_PDist[0]/0.172)+cen,self.pilatus.NCOLS-1)
-            row=np.arange(self.pilatus.NROWS)
-            col=np.arange(ini,fin+1)
-            col,row=np.meshgrid(col,row)
-            data=[]
-            self.uipdburn.plotWidget.canvas.ax.clear()
-            self.uipdburn.plotWidget.canvas.ax.set_xlabel('Time (sec.)')
-            for i in self.selectedPilFramesNums:
-                self.pilatus.plotVint(self.pilData[i],self.pilErrorData[i],hroi=[ini,fin])
-                datai=self.pilatus.vintData
-                meanleft=np.mean(datai[0:3,1])  #pass a straight line bewteen first and last three points in the selected range, then subtracte it from the data, keep the errorbar unchange
-                meanright=np.mean(datai[-3:,1])
-                slope=(meanright-meanleft)/(datai[-2,0]-datai[1,0])
-                datai[:,1]=datai[:,1]-slope*(datai[:,0]-datai[1,0])-meanleft
-                #datai[:,2]=np.sqrt(np.abs(datai[:,1]))   #need to recheck the error bar
+            if self.pilSelected_Dth[0]==0:
+                self.messageBox('Warning: It is not a GID burn test. Please click REF burn test button!')
+            else:
+                ctime=float(self.scanlines[self.selectedScanNums[0]-1].split(' ')[-1])  #get the counting time
+                scan=self.scanlines[self.selectedScanNums[0]-1].split(' ')[1] #get scan number
+                self.uipdburn.Label.setText('Burn test for Scan #'+scan)
+                ini=float(self.uipdburn.rangeLineEdit.text().split(':')[0]) #get the  ini qz value from lineedit
+                fin=float(self.uipdburn.rangeLineEdit.text().split(':')[1]) #get the final qz value from lineedit
+                cen=self.pilatus.NCOLS-self.pilSelectedX[0]-1
+                ini=max(int((2.0*np.arcsin(ini*self.pilSelected_Wavelength[0]/4.0/np.pi)-self.pilSelected_Dth[0])*self.pilSelected_PDist[0]/0.172)+cen,0) # conver it to pixel and check with the boundary
+                fin=min(int((2.0*np.arcsin(fin*self.pilSelected_Wavelength[0]/4.0/np.pi)-self.pilSelected_Dth[0])*self.pilSelected_PDist[0]/0.172)+cen,self.pilatus.NCOLS-1)
+                row=np.arange(self.pilatus.NROWS)
+                col=np.arange(ini,fin+1)
+                col,row=np.meshgrid(col,row)
+                data=[]
+                self.uipdburn.plotWidget.canvas.ax.clear()
+                self.uipdburn.plotWidget.canvas.ax.set_xlabel('Time (sec.)')
+                for i in self.selectedPilFramesNums:
+                    self.pilatus.plotVint(self.pilData[i],self.pilErrorData[i],hroi=[ini,fin])
+                    datai=self.pilatus.vintData
+                    meanleft=np.mean(datai[0:3,1])  #pass a straight line bewteen first and last three points in the selected range, then subtracte it from the data, keep the errorbar unchange
+                    meanright=np.mean(datai[-3:,1])
+                    slope=(meanright-meanleft)/(datai[-2,0]-datai[1,0])
+                    datai[:,1]=datai[:,1]-slope*(datai[:,0]-datai[1,0])-meanleft
+                    #datai[:,2]=np.sqrt(np.abs(datai[:,1]))   #need to recheck the error bar
+                    if self.uipdburn.gidComboBox.currentText()=='Intensity':
+                        data.append([ctime*i,np.sum(datai[:,1])/self.pilMonc[i],np.sqrt(np.sum(datai[:,1])**2/self.pilMonc[i]**3+np.sum(datai[:,2]**2)/self.pilMonc[i]**2)])
+                        self.uipdburn.plotWidget.canvas.ax.set_ylabel('Intensity')
+                    elif self.uipdburn.gidComboBox.currentText()=='Location':
+                        data.append([ctime*i,np.sum(datai[:,1]*datai[:,0])/np.sum(datai[:,1]),np.sqrt(np.sum(datai[:,0]**2*datai[:,2]**2)/np.sum(datai[:,1])**2+np.sum(datai[:,1]*datai[:,0])**2*np.sum(datai[:,2]**2)/np.sum(datai[:,1])**4)])
+                    elif self.uipdburn.gidComboBox.currentText()=='Width':
+                        location=np.sum(datai[:,1]*datai[:,0])/np.sum(datai[:,1])
+                        datai[:,0]=(datai[:,0]-location)**2
+                        data.append([ctime*i,np.sum(datai[:,1]*datai[:,0])/np.sum(datai[:,1]),np.sqrt(np.sum(datai[:,0]**2*datai[:,2]**2)/np.sum(datai[:,1])**2+np.sum(datai[:,1]*datai[:,0])**2*np.sum(datai[:,2]**2)/np.sum(datai[:,1])**4)])
+                data=np.array(data)
+                x=data[:,0]
+                y=data[:,1]
+                yerr=data[:,2]
+                if self.uipdburn.gidComboBox.currentText()=='Location':
+                    self.uipdburn.plotWidget.canvas.ax.set_ylabel('Relative Location '+r'$[\AA^{-1}]$')
+                    y=4.0*np.pi*np.sin((self.pilSelected_Dth[0]+(data[:,1]-cen)*0.172/self.pilSelected_PDist[0])/2.0)/self.pilSelected_Wavelength[0]
+                    yerr=4.0*np.pi*np.cos((self.pilSelected_Dth[0]+(data[:,1]-cen)*0.172/self.pilSelected_PDist[0])/2.0)/self.pilSelected_Wavelength[0]*data[:,2]*0.172/2/self.pilSelected_PDist[0]
+                    y=y-y[0]
+                if self.uipdburn.gidComboBox.currentText()=='Width':
+                    self.uipdburn.plotWidget.canvas.ax.set_ylabel('FWHM '+r'$[\AA^{-1}]$')
+                    y=np.sqrt(y)
+                    yerr=0.5/y*yerr
+                    y=4.0*np.pi*np.sin((data[:,1]*0.172/self.pilSelected_PDist[0])/2.0)/self.pilSelected_Wavelength[0]
+                    yerr=4.0*np.pi*np.cos((data[:,1]*0.172/self.pilSelected_PDist[0])/2.0)/self.pilSelected_Wavelength[0]*data[:,2]*0.172/2/self.pilSelected_PDist[0]
+                self.uipdburn.plotWidget.canvas.ax.errorbar(x,y,yerr,fmt='o-')
                 if self.uipdburn.gidComboBox.currentText()=='Intensity':
-                    data.append([ctime*i,np.sum(datai[:,1])/self.pilMonc[i],np.sqrt(np.sum(datai[:,1])**2/self.pilMonc[i]**3+np.sum(datai[:,2]**2)/self.pilMonc[i]**2)])  
                     self.uipdburn.plotWidget.canvas.ax.set_ylabel('Intensity')
-                elif self.uipdburn.gidComboBox.currentText()=='Location':
-                    data.append([ctime*i,np.sum(datai[:,1]*datai[:,0])/np.sum(datai[:,1]),np.sqrt(np.sum(datai[:,0]**2*datai[:,2]**2)/np.sum(datai[:,1])**2+np.sum(datai[:,1]*datai[:,0])**2*np.sum(datai[:,2]**2)/np.sum(datai[:,1])**4)])  
-                elif self.uipdburn.gidComboBox.currentText()=='Width':
-                    location=np.sum(datai[:,1]*datai[:,0])/np.sum(datai[:,1])
-                    datai[:,0]=(datai[:,0]-location)**2
-                    data.append([ctime*i,np.sum(datai[:,1]*datai[:,0])/np.sum(datai[:,1]),np.sqrt(np.sum(datai[:,0]**2*datai[:,2]**2)/np.sum(datai[:,1])**2+np.sum(datai[:,1]*datai[:,0])**2*np.sum(datai[:,2]**2)/np.sum(datai[:,1])**4)])  
-            data=np.array(data)
-            x=data[:,0]
-            y=data[:,1]
-            yerr=data[:,2]
-            if self.uipdburn.gidComboBox.currentText()=='Location': 
-                self.uipdburn.plotWidget.canvas.ax.set_ylabel('Relative Location '+r'$[\AA^{-1}]$')
-                y=4.0*np.pi*np.sin((self.pilSelected_Dth[0]+(data[:,1]-cen)*0.172/self.pilSelected_PDist[0])/2.0)/self.pilSelected_Wavelength[0]
-                yerr=4.0*np.pi*np.cos((self.pilSelected_Dth[0]+(data[:,1]-cen)*0.172/self.pilSelected_PDist[0])/2.0)/self.pilSelected_Wavelength[0]*data[:,2]*0.172/2/self.pilSelected_PDist[0]
-                y=y-y[0]  
-            if self.uipdburn.gidComboBox.currentText()=='Width': 
-                self.uipdburn.plotWidget.canvas.ax.set_ylabel('FWHM '+r'$[\AA^{-1}]$')
-                y=np.sqrt(y)
-                yerr=0.5/y*yerr
-                y=4.0*np.pi*np.sin((data[:,1]*0.172/self.pilSelected_PDist[0])/2.0)/self.pilSelected_Wavelength[0]
-                yerr=4.0*np.pi*np.cos((data[:,1]*0.172/self.pilSelected_PDist[0])/2.0)/self.pilSelected_Wavelength[0]*data[:,2]*0.172/2/self.pilSelected_PDist[0]
-            self.uipdburn.plotWidget.canvas.ax.errorbar(x,y,yerr,fmt='o-')
-            if self.uipdburn.gidComboBox.currentText()=='Intensity':
-                self.uipdburn.plotWidget.canvas.ax.set_ylabel('Intensity')
-                pfit,pcov=curve_fit(self.expdecay,x,y,p0=[y[0],(x[-1]-x[0])/np.log(y[0]/y[-1])],sigma=yerr,maxfev=5000)
-                tauerr=int(pcov[1][1]**0.5)
-                tau=int(pfit[1])
-                self.uipdburn.plotWidget.canvas.ax.plot(x,self.expdecay(x,pfit[0],pfit[1]),'r--',label=r'$\tau$'+' = '+str(format(tau,'.1e'))+' ('+str(format(tauerr,'.1e'))+') sec.')
-                self.uipdburn.plotWidget.canvas.ax.legend(loc=1,frameon=False,scatterpoints=0,numpoints=1) 
-            self.uipdburn.plotWidget.canvas.ax.set_xlim(x[0],x[-1])
-            self.uipdburn.plotWidget.canvas.ax.set_title('File: '+self.specFileName+' S# '+str([item for item in np.sort(self.selectedScanNums)])[1:-1])
-            self.uipdburn.plotWidget.canvas.draw()
-            self.command='GID Burn, scan='+str(self.selectedScanNums)+', Qz range=['+str(self.uipdburn.rangeLineEdit.text())+'], mode='+str(self.uipdburn.gidComboBox.currentText())
-            self.ui.commandLineEdit.setText(self.command)             
+                    pfit,pcov=curve_fit(self.expdecay,x,y,p0=[y[0],(x[-1]-x[0])/np.log(y[0]/y[-1])],sigma=yerr,maxfev=5000)
+                    tauerr=int(pcov[1][1]**0.5)
+                    tau=int(pfit[1])
+                    self.uipdburn.plotWidget.canvas.ax.plot(x,self.expdecay(x,pfit[0],pfit[1]),'r--',label=r'$\tau$'+' = '+str(format(tau,'.1e'))+' ('+str(format(tauerr,'.1e'))+') sec.')
+                    self.uipdburn.plotWidget.canvas.ax.legend(loc=1,frameon=False,scatterpoints=0,numpoints=1)
+                self.uipdburn.plotWidget.canvas.ax.set_xlim(x[0],x[-1])
+                self.uipdburn.plotWidget.canvas.ax.set_title('File: '+self.specFileName+' S# '+str([item for item in np.sort(self.selectedScanNums)])[1:-1])
+                self.uipdburn.plotWidget.canvas.draw()
+                self.command='GID Burn, scan='+str(self.selectedScanNums)+', Qz range=['+str(self.uipdburn.rangeLineEdit.text())+'], mode='+str(self.uipdburn.gidComboBox.currentText())
+                self.ui.commandLineEdit.setText(self.command)
                  
     def pilGISAXS(self):
         if str(self.ui.gisaxsComboBox.currentText())=='Show GISAXS':
